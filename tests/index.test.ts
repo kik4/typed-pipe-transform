@@ -44,6 +44,20 @@ describe("transform function", () => {
     });
   });
 
+  it("deep nested props", () => {
+    const data = {
+      x: 2,
+      y: 5,
+      z: 10,
+    };
+
+    expect(
+      transform(data, [["a", "b", "c"], (data) => (data.x + data.y) * data.z]),
+    ).toStrictEqual({
+      a: { b: { c: (data.x + data.y) * data.z } },
+    });
+  });
+
   it("should have correct static type inference", () => {
     const data = { x: 2, y: 5, name: "test" };
 
@@ -80,9 +94,21 @@ describe("transform function", () => {
       Equal<typeof result3, { flat: number; deep: { nested: string } }>
     >;
 
+    // Test deep nested
+    const result4 = transform(data, [
+      ["deep", "deep", "nested"],
+      (data) => data.name,
+    ]);
+
+    // Static type test for mixed properties
+    type Test4 = Expect<
+      Equal<typeof result4, { deep: { deep: { nested: string } } }>
+    >;
+
     // Runtime assertions to ensure the test actually runs
     expect(result1).toEqual({ sum: 7, greeting: "Hello test" });
     expect(result2).toEqual({ nested: { value: 10 } });
     expect(result3).toEqual({ flat: 2, deep: { nested: "test" } });
+    expect(result4).toEqual({ deep: { deep: { nested: "test" } } });
   });
 });
