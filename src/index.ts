@@ -8,6 +8,11 @@ type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
 // Flatten intersections into clean object types
 type Flatten<T> = T extends infer U ? { [K in keyof U]: U[K] } : never;
 
+// Split dot notation string into path array
+type SplitPath<S extends string> = S extends `${infer First}.${infer Rest}`
+  ? [First, ...SplitPath<Rest>]
+  : [S];
+
 // Helper to build nested object from path array
 type CreateNested<
   Path extends readonly string[],
@@ -40,7 +45,9 @@ export function transform<
       ]
         ? Fn extends (data: T) => infer R
           ? Key extends string
-            ? { [P in Key]: R }
+            ? Key extends `${string}.${string}`
+              ? CreateNested<SplitPath<Key>, R>
+              : { [P in Key]: R }
             : Key extends readonly string[]
               ? CreateNested<Key, R>
               : never
@@ -55,7 +62,7 @@ export function transform<
     const value = computeFn(data);
 
     if (Array.isArray(key)) {
-      // Handle nested keys
+      // Handle nested keys as array
       let current = result;
       for (let i = 0; i < key.length - 1; i++) {
         const keyPart = key[i];
@@ -67,6 +74,23 @@ export function transform<
         }
       }
       const lastKey = key[key.length - 1];
+      if (lastKey !== undefined) {
+        current[lastKey] = value;
+      }
+    } else if (typeof key === "string" && key.includes(".")) {
+      // Handle dot notation strings
+      const pathParts = key.split(".");
+      let current = result;
+      for (let i = 0; i < pathParts.length - 1; i++) {
+        const keyPart = pathParts[i];
+        if (keyPart !== undefined && !(keyPart in current)) {
+          current[keyPart] = {};
+        }
+        if (keyPart !== undefined) {
+          current = current[keyPart] as Record<string, unknown>;
+        }
+      }
+      const lastKey = pathParts[pathParts.length - 1];
       if (lastKey !== undefined) {
         current[lastKey] = value;
       }

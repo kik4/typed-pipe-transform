@@ -111,4 +111,54 @@ describe("transform function", () => {
     expect(result3).toEqual({ flat: 2, deep: { nested: "test" } });
     expect(result4).toEqual({ deep: { deep: { nested: "test" } } });
   });
+
+  it("should support dot notation strings", () => {
+    const data = { x: 2, y: 5, name: "test" };
+
+    // Test dot notation
+    const result1 = transform(data, ["deep.nested", (data) => data.x + data.y]);
+
+    // Static type test for dot notation
+    type Test1 = Expect<Equal<typeof result1, { deep: { nested: number } }>>;
+
+    // Test multiple levels with dot notation
+    const result2 = transform(data, [
+      "very.deep.nested.value",
+      (data) => data.name,
+    ]);
+
+    // Static type test for multiple levels
+    type Test2 = Expect<
+      Equal<typeof result2, { very: { deep: { nested: { value: string } } } }>
+    >;
+
+    // Test mixed dot notation and array notation
+    const result3 = transform(
+      data,
+      ["dot.notation", (data) => data.x],
+      [["array", "notation"], (data) => data.y],
+      ["flat", (data) => data.name],
+    );
+
+    // Static type test for mixed notations
+    type Test3 = Expect<
+      Equal<
+        typeof result3,
+        {
+          dot: { notation: number };
+          array: { notation: number };
+          flat: string;
+        }
+      >
+    >;
+
+    // Runtime assertions
+    expect(result1).toEqual({ deep: { nested: 7 } });
+    expect(result2).toEqual({ very: { deep: { nested: { value: "test" } } } });
+    expect(result3).toEqual({
+      dot: { notation: 2 },
+      array: { notation: 5 },
+      flat: "test",
+    });
+  });
 });
