@@ -27,6 +27,12 @@ type CreateNested<
     : never
   : never;
 
+// Overloads for function signatures
+export function transform<T extends Record<string, unknown>, R>(
+  data: T,
+  rootTransform: (data: T) => R,
+): R;
+
 export function transform<
   T extends Record<string, unknown>,
   const Transforms extends readonly (readonly [
@@ -55,7 +61,126 @@ export function transform<
         : never;
     }[number]
   >
-> {
+>;
+
+export function transform<
+  T extends Record<string, unknown>,
+  R,
+  const Transforms extends readonly (readonly [
+    string | readonly string[],
+    (data: T) => any,
+  ])[],
+>(
+  data: T,
+  rootTransform: (data: T) => R,
+  ...transforms: Transforms
+): R extends Record<string, any>
+  ? Flatten<
+      R &
+        UnionToIntersection<
+          {
+            [K in keyof Transforms]: Transforms[K] extends readonly [
+              infer Key,
+              infer Fn,
+            ]
+              ? Fn extends (data: T) => infer Result
+                ? Key extends string
+                  ? Key extends `${string}.${string}`
+                    ? CreateNested<SplitPath<Key>, Result>
+                    : { [P in Key]: Result }
+                  : Key extends readonly string[]
+                    ? CreateNested<Key, Result>
+                    : never
+                : never
+              : never;
+          }[number]
+        >
+    >
+  : never;
+
+export function transform<T extends Record<string, unknown>>(
+  data: T,
+  ...args: any[]
+): any {
+  // Check if we have a single function argument (root transform)
+  if (args.length === 1 && typeof args[0] === "function") {
+    return args[0](data);
+  }
+
+  // Check if first argument is a function (root transform + additional tuples)
+  if (args.length > 1 && typeof args[0] === "function") {
+    const rootTransform = args[0];
+    const tupleTransforms = args.slice(1) as readonly (readonly [
+      string | readonly string[],
+      (data: T) => any,
+    ])[];
+
+    const rootResult = rootTransform(data);
+
+    // If root result is not an object, we can't merge additional properties
+    if (
+      typeof rootResult !== "object" ||
+      rootResult === null ||
+      Array.isArray(rootResult)
+    ) {
+      throw new Error(
+        "Root transform must return an object when combined with additional transformations",
+      );
+    }
+
+    const result = { ...rootResult } as Record<string, unknown>;
+
+    // Apply tuple transforms
+    for (const [key, computeFn] of tupleTransforms) {
+      const value = computeFn(data);
+
+      if (Array.isArray(key)) {
+        // Handle nested keys as array
+        let current = result;
+        for (let i = 0; i < key.length - 1; i++) {
+          const keyPart = key[i];
+          if (keyPart !== undefined && !(keyPart in current)) {
+            current[keyPart] = {};
+          }
+          if (keyPart !== undefined) {
+            current = current[keyPart] as Record<string, unknown>;
+          }
+        }
+        const lastKey = key[key.length - 1];
+        if (lastKey !== undefined) {
+          current[lastKey] = value;
+        }
+      } else if (typeof key === "string" && key.includes(".")) {
+        // Handle dot notation strings
+        const pathParts = key.split(".");
+        let current = result;
+        for (let i = 0; i < pathParts.length - 1; i++) {
+          const keyPart = pathParts[i];
+          if (keyPart !== undefined && !(keyPart in current)) {
+            current[keyPart] = {};
+          }
+          if (keyPart !== undefined) {
+            current = current[keyPart] as Record<string, unknown>;
+          }
+        }
+        const lastKey = pathParts[pathParts.length - 1];
+        if (lastKey !== undefined) {
+          current[lastKey] = value;
+        }
+      } else {
+        // Handle flat keys
+        (result as any)[key as string] = value;
+      }
+    }
+
+    return result as any;
+  }
+
+  // Handle tuple transforms only
+  const transforms = args as readonly (readonly [
+    string | readonly string[],
+    (data: T) => any,
+  ])[];
   const result: Record<string, unknown> = {};
 
   for (const [key, computeFn] of transforms) {

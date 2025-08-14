@@ -161,4 +161,56 @@ describe("transform function", () => {
       flat: "test",
     });
   });
+
+  it("should support root path transformation", () => {
+    const data = { x: 2, y: 5, name: "test" };
+
+    // Test root transform with primitive value
+    const result1 = transform(data, (data) => data.x + data.y);
+
+    // Static type test for root transform
+    type Test1 = Expect<Equal<typeof result1, number>>;
+
+    // Test root transform with object
+    const result2 = transform(data, (data) => ({
+      sum: data.x + data.y,
+      greeting: `Hello ${data.name}`,
+    }));
+
+    // Static type test for root object transform
+    type Test2 = Expect<
+      Equal<typeof result2, { sum: number; greeting: string }>
+    >;
+
+    // Test root transform with array
+    const result3 = transform(data, (data) => [data.x, data.y, data.name]);
+
+    // Static type test for root array transform
+    type Test3 = Expect<Equal<typeof result3, (string | number)[]>>;
+
+    // Test root transform and tuple
+    const result4 = transform(
+      data,
+      (data) => ({
+        sum: data.x + data.y,
+        greeting: `Hello ${data.name}`,
+      }),
+      ["added", (data) => data.x * data.y],
+    );
+
+    // Static type test for root object transform
+    type Test4 = Expect<
+      Equal<typeof result4, { sum: number; greeting: string; added: number }>
+    >;
+
+    // Runtime assertions
+    expect(result1).toBe(7);
+    expect(result2).toEqual({ sum: 7, greeting: "Hello test" });
+    expect(result3).toEqual([2, 5, "test"]);
+    expect(result4).toEqual({
+      sum: 7,
+      greeting: "Hello test",
+      added: 10,
+    });
+  });
 });

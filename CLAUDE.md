@@ -22,6 +22,8 @@ This is `typed-transform`, a TypeScript library for type-safe pipe transformatio
 The `transform` function is the heart of the library:
 - Takes input data and transformation tuples `[key, computeFn]`
 - Supports flat keys, dot notation strings (`"deep.nested"`), and path arrays (`["deep", "nested"]`)
+- **Root path transformation**: When passed a single function (not a tuple), sets the value directly at the root level
+- **Mixed transformations**: Supports combining root transform function with additional tuple transformations (root object gets merged with additional properties)
 - Uses advanced TypeScript type manipulation for compile-time type safety
 - Key type utilities: `UnionToIntersection`, `Flatten`, `SplitPath`, `CreateNested`
 
@@ -33,7 +35,7 @@ The `transform` function is the heart of the library:
 ### Testing Strategy (`tests/index.test.ts`)
 - Uses vitest for runtime testing
 - Includes compile-time type tests to verify type inference correctness
-- Tests cover flat properties, nested properties (array and dot notation), and mixed scenarios
+- Tests cover flat properties, nested properties (array and dot notation), root path transformations, mixed root+tuple transformations, and various combinations
 
 ## Development Notes
 

@@ -7,7 +7,15 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "ignore": []
+    "ignore": [
+      "node_modules",
+      "dist",
+      ".husky",
+      ".vscode",
+      ".git",
+      ".idea",
+      "coverage"
+    ]
   },
   "formatter": {
     "enabled": true,
